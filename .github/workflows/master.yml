@@ -6,18 +6,15 @@ on:
 
 jobs:
   build:
-    runs-on: windows-2022
+    runs-on: windows-2025
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '10.0.x'
+      - uses: actions/checkout@v6
       - uses: nuget/setup-nuget@v2
-      - uses: microsoft/setup-msbuild@v1.1
+      - uses: microsoft/setup-msbuild@v2
         with:
           msbuild-architecture: x64
 
-      - uses: dorny/paths-filter@v2
+      - uses: dorny/paths-filter@v3
         id: changes
         with:
           filters: |
@@ -33,67 +30,42 @@ jobs:
               else { $_ -replace $m.Value, ("<Version>{0}.{1}.{2}-pre${{ github.run_number }}</Version>" -f $m.Groups[1].Value,$m.Groups[2].Value,([convert]::ToInt32($m.Groups[3].Value)+1)); }
           } | Set-Content Directory.Build.props
 
-      - name: Restore application packages
-        run: dotnet restore LibreHardwareMonitor\LibreHardwareMonitor.csproj 
+      - name: NuGet restore
+        run: nuget restore LibreHardwareMonitor.sln
 
-      - name: Build application
-        run: dotnet build LibreHardwareMonitor\LibreHardwareMonitor.csproj -c Release --no-restore -p:Platform=x64
+      - name: Build
+        run: msbuild LibreHardwareMonitor.sln -p:Configuration=Release -m
 
-      - name: Publish net472 application
-        uses: actions/upload-artifact@v4
+      - name: Publish net472
+        uses: actions/upload-artifact@v7
         with:
-          name: LibreHardwareMonitor
+          name: LibreHardwareMonitor-net472
           path: |
             bin/Release/net472
 
-      - name: Publish net10.0 application
-        uses: actions/upload-artifact@v4
+      - name: Publish netstandard20
+        uses: actions/upload-artifact@v7
         with:
-          name: LibreHardwareMonitor (.NET 10)
+          name: LibreHardwareMonitorLib-netstandard20
           path: |
-            bin/Release/net10.0-windows
+            bin/Release/netstandard2.0
 
-      - name: Restore library packages
-        run: dotnet restore LibreHardwareMonitorLib\LibreHardwareMonitorLib.csproj 
-
-      - name: Build x64 libraries
-        run: dotnet build LibreHardwareMonitorLib\LibreHardwareMonitorLib.csproj -c Release --no-restore -p:Platform=x64
-
-      - name: Publish x64 libraries
-        uses: actions/upload-artifact@v4
+      - name: Publish net60
+        uses: actions/upload-artifact@v7
         with:
-          name: LibreHardwareMonitorLib (x64)
+          name: LibreHardwareMonitorLib-net60
           path: |
-            bin/Release/x64
+            bin/Release/net6.0
 
-      - name: Build x86 libraries
-        run: dotnet build LibreHardwareMonitorLib\LibreHardwareMonitorLib.csproj -c Release --no-restore -p:Platform=x86
-
-      - name: Publish x86 libraries
-        uses: actions/upload-artifact@v4
+      - name: Publish net80
+        uses: actions/upload-artifact@v7
         with:
-          name: LibreHardwareMonitorLib (x86)
+          name: LibreHardwareMonitorLib-net80
           path: |
-            bin/Release/x86
-
-      - name: Build ARM64 libraries
-        run: dotnet build LibreHardwareMonitorLib\LibreHardwareMonitorLib.csproj -c Release --no-restore -p:Platform=ARM64
-
-      - name: Publish ARM64 libraries
-        uses: actions/upload-artifact@v4
-        with:
-          name: LibreHardwareMonitorLib (ARM64)
-          path: |
-            bin/Release/ARM64
-
-      - name: Build reference libraries
-        run: dotnet build LibreHardwareMonitorLib\LibreHardwareMonitorLib.csproj -c Release --no-restore -p:BuildOnlyRefs=true
-
-      - name: Pack main nupkg
-        run: dotnet pack LibreHardwareMonitorLib\LibreHardwareMonitorLib.csproj -c Release -p:PackMainNuget=true --no-build --output bin\Release
+            bin/Release/net8.0
 
       - name: Publish nupkg
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: LibreHardwareMonitorLib-nupkg
           path: |
